@@ -86,7 +86,11 @@ def create_graph(date, station_categories, hour_from, hour_to):
                     journey = get_journey(header, details_id)
 
                     if journey != "":
-                        print(str(dep_time.time()) + " " + journey[-1]['stopName'])
+                        print(str(dep_time.strftime("%H:%M")) + " " + departure['name'] + " to " + journey[-1]['stopName'])
+
+                        for stop in journey:
+                            stop_time = stop['arrTime'] if 'arrTime' in stop else stop['depTime']
+                            print("  " + stop_time + " " + stop['stopName'])
 
 
     return
