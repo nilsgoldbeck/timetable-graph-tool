@@ -232,6 +232,11 @@ class timetable:
         return timestamp
 
 
+    def get_datetime(self, timestamp):
+
+        return self.begin + datetime.timedelta(minutes=timestamp)
+
+
     def print_summary(self):
 
         print('Locations: {}'.format(len(self.locations)))
@@ -274,7 +279,6 @@ class timetable:
 
         for t, v in self.departure_vertices[from_loc_id].items():
             if t > dep_timestamp:
-                #e = self.add_edge(origin_vertice, v, False, False, False)
                 e = self.g.add_edge(origin_vertice, v)
                 self.g.ep.duration[e] = t - dep_timestamp
                 boarding_edges.append(e)
@@ -283,7 +287,6 @@ class timetable:
         alighting_edges = []
 
         for t, v in self.arrival_vertices[to_loc_id].items():
-            #e = self.add_edge(v, destination_vertice, False, False, False)
             e = self.g.add_edge(v, destination_vertice)
             self.g.ep.duration[e] = 0
             alighting_edges.append(e)
@@ -295,7 +298,59 @@ class timetable:
         for e in (boarding_edges + alighting_edges):
             self.g.remove_edge(e)
 
-        #self.g.remove_vertex(origin_vertice)
-        #self.g.remove_vertex(destination_vertice)
+        self.g.remove_vertex([destination_vertice, origin_vertice])        
 
         return shortest_paths
+
+
+    def path_to_string_with_intermediate_stops(self, path):
+
+        s = ''
+
+        for i in range(1, len(path) - 1):
+
+            time = self.get_datetime(self.g.vp.time[path[i]])
+            loc = self.g.vp.loc_name[path[i]]
+
+            if self.g.vp.is_departure[path[i]]:
+
+                transport = self.g.ep.transport_id[(path[i], path[i+1])]
+                s += '{} DEP {} {}\n'.format(time, transport, loc)
+
+            else:
+
+                transport = self.g.ep.transport_id[(path[i-1], path[i])]
+                s += '{} ARR {} {}\n'.format(time, transport, loc)
+            
+        return s
+
+
+    def path_to_string(self, path):
+
+        s = ''
+
+        current_transport = ''
+
+        for i in range(1, len(path) - 1):
+
+            time = self.get_datetime(self.g.vp.time[path[i]])
+            loc = self.g.vp.loc_name[path[i]]
+
+            if self.g.vp.is_departure[path[i]]:
+
+                transport = self.g.ep.transport_id[(path[i], path[i+1])]
+
+                if transport != current_transport:
+                    current_transport = transport
+                    s += '{} DEP {} {}\n'.format(time, transport, loc)
+
+            else:
+
+                if i == len(path) - 2:
+                    s += '{} ARR {} {}\n'.format(time, current_transport, loc)
+                    return s
+
+                if self.g.ep.is_transfer[(path[i], path[i+1])]:
+                    s += '{} ARR {} {}\n'.format(time, current_transport, loc)
+            
+        return s
